@@ -1,7 +1,7 @@
 CC = gcc
-CFLAGS = -Wall -g 
-LIBS = -lX11
-EXECS = screen_info hello_win
+CFLAGS =  -g  -Ilibev
+LIBS = -lX11 -lm
+EXECS = screen_info hello_win xnotify
 all: $(EXECS)
 
 % : %.c
