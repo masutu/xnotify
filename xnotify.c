@@ -11,6 +11,11 @@
 #define LOG_ERROR(...)  printf(__VA_ARGS__)
 #define LOG_WARNING(...)  printf(__VA_ARGS__)
 
+#define WINDOW_WIDTH 200
+#define WINDOW_HEIGHT 200
+
+static char *text;
+
 enum {
   XATOM_WM_STATE,
   XATOM_NET_DESKTOP_NAMES,
@@ -327,8 +332,8 @@ void display_window()
                                      , X.root
                                      , 0
                                      , 0
-                                     , 400
-                                     , 300
+                                     , WINDOW_WIDTH
+                                     , WINDOW_HEIGHT
                                      , black_color 
                                      , 35
                                      , white_color
@@ -343,6 +348,14 @@ void display_window()
 
 int main(int argc, char **argv)
 {
+
+  if(argc == 2)
+    text = argv[1];
+  else {
+    printf("give an argument.\n");
+    exit(1);
+  }
+
   LOG_MESSAGE("starting xnotify\n");
 
   initX();
