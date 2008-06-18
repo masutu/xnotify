@@ -324,6 +324,7 @@ static void init_and_start_ev_loop(int xfd)
 void display_window() 
 {
   XClassHint class_hint;
+  XSizeHints *size_hints;
 
   int black_color = BlackPixel(X.display, X.screen);
   int white_color = WhitePixel(X.display, X.screen);
@@ -338,10 +339,21 @@ void display_window()
                                      , 35
                                      , white_color
                                      );
-  XStoreName(X.display, window, "title");
+  XStoreName(X.display, window, "test_programme");
   class_hint.res_name = "test";
   class_hint.res_class = "test";
   XSetClassHint(X.display, window, &class_hint);
+
+
+
+  size_hints = XAllocSizeHints();
+  size_hints->flags = PPosition | PSize | PMinSize; 
+  size_hints->min_width = WINDOW_WIDTH;
+  size_hints->min_height = WINDOW_HEIGHT;
+  XSetWMNormalHints(X.display, window, size_hints);
+
+
+
   XMapWindow(X.display, window);
   XFlush(X.display);
 }
