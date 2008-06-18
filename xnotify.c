@@ -11,6 +11,11 @@
 #define LOG_ERROR(...)  printf(__VA_ARGS__)
 #define LOG_WARNING(...)  printf(__VA_ARGS__)
 
+#define WINDOW_WIDTH 200
+#define WINDOW_HEIGHT 200
+
+static char *text;
+
 enum {
   XATOM_WM_STATE,
   XATOM_NET_DESKTOP_NAMES,
@@ -88,7 +93,7 @@ static struct {
 
 static void cleanup()
 {
-  LOG_MESSAGE("cleanup");
+  LOG_MESSAGE("cleanup\n");
   exit(1);
 }
 
@@ -102,13 +107,13 @@ static int X_error_handler(Display *dpy, XErrorEvent *error)
   if (error->error_code == BadWindow)
     return 0;
   XGetErrorText(dpy, error->error_code, buf, sizeof(buf));
-  LOG_WARNING("X error: %s (resource id: %d)", buf, error->resourceid);
+  LOG_WARNING("X error: %s (resource id: %d)\n", buf, error->resourceid);
   return 0;
 }
 
 static int X_io_error_handler(Display *dpy)
 {
-  LOG_WARNING("fatal error, connection to X server lost? cleaning up");
+  LOG_WARNING("fatal error, connection to X server lost? cleaning up\n");
   cleanup();
   return 0;
 }
@@ -145,7 +150,7 @@ static void initX()
 	/* open connection to X server */
 	X.display = XOpenDisplay(0);
 	if (!X.display)
-		LOG_ERROR("failed connect to X server");
+		LOG_ERROR("failed connect to X server\n");
 	XSetErrorHandler(X_error_handler);
 	XSetIOErrorHandler(X_io_error_handler);
 	
@@ -167,7 +172,15 @@ static void initX()
 	
 	/* get internal atoms */
 	XInternAtoms(X.display, atom_names, XATOM_COUNT, False, X.atoms);
-	XSelectInput(X.display, X.root, PropertyChangeMask);
+	XSelectInput( X.display
+              , X.root
+              , PropertyChangeMask 
+              | ButtonPressMask 
+              | KeyPressMask 
+              | ExposureMask
+              | FocusChangeMask 
+              | StructureNotifyMask
+              );
 
 	/* append_font_path_to_imlib(); */
 
@@ -186,10 +199,15 @@ static void initX()
   libev callbacks
 **************************************************************************/
 
+static int counter = 0;
+
 static void xconnection_cb(EV_P_ struct ev_io *w, int revents)
 {
   XEvent e;
   while (XPending(X.display)) {
+
+    printf("hello world %d\n", counter++);
+
     XNextEvent(X.display, &e);
     switch (e.type) {
     case SelectionClear:
@@ -201,6 +219,8 @@ static void xconnection_cb(EV_P_ struct ev_io *w, int revents)
       /* commence_panel_redraw = 1; */
       break;
     case ButtonPress:
+    case KeyPress:
+      printf("button press\n");
       /*
       handle_button(e.xbutton.x, e.xbutton.y, e.xbutton.button);
       */
@@ -268,7 +288,7 @@ static void xconnection_cb(EV_P_ struct ev_io *w, int revents)
 
 static void sighup_handler(int xxx)
 {
-  LOG_MESSAGE("sighup signal received");
+  LOG_MESSAGE("sighup signal received\n");
   cleanup();
   /* xmemleaks(); */
   exit(0);
@@ -276,7 +296,7 @@ static void sighup_handler(int xxx)
 
 static void sigint_handler(int xxx)
 {
-  LOG_MESSAGE("sigint signal received");
+  LOG_MESSAGE("sigint signal received\n");
   cleanup();
   /* xmemleaks(); */
   exit(0);
@@ -301,14 +321,49 @@ static void init_and_start_ev_loop(int xfd)
   ev_loop(el, 0);
 }
 
+void display_window() 
+{
+  XClassHint class_hint;
+
+  int black_color = BlackPixel(X.display, X.screen);
+  int white_color = WhitePixel(X.display, X.screen);
+
+  Window window = XCreateSimpleWindow( X.display
+                                     , X.root
+                                     , 0
+                                     , 0
+                                     , WINDOW_WIDTH
+                                     , WINDOW_HEIGHT
+                                     , black_color 
+                                     , 35
+                                     , white_color
+                                     );
+  XStoreName(X.display, window, "title");
+  class_hint.res_name = "test";
+  class_hint.res_class = "test";
+  XSetClassHint(X.display, window, &class_hint);
+  XMapWindow(X.display, window);
+  XFlush(X.display);
+}
+
 int main(int argc, char **argv)
 {
-  LOG_MESSAGE("starting xnotify");
+
+  if(argc == 2)
+    text = argv[1];
+  else {
+    printf("give an argument.\n");
+    exit(1);
+  }
+
+  LOG_MESSAGE("starting xnotify\n");
 
   initX();
 
   signal(SIGHUP, sighup_handler);
   signal(SIGINT, sigint_handler);
+  
+  display_window();
 
   init_and_start_ev_loop(ConnectionNumber(X.display));
 
